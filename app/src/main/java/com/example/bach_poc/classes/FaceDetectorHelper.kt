@@ -49,7 +49,7 @@ class FaceDetectorHelper(
 
         val options = optionsBuilder.build()
 
-        val faceDetector = FaceDetector.createFromOptions(context,options)
+        faceDetector = FaceDetector.createFromOptions(context,options)
     }
 
     // Runs face detection on live streaming cameras frame-by-frame and returns the results
