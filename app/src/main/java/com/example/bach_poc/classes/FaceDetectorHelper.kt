@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.SystemClock
+import android.util.Log
 import androidx.camera.core.ImageProxy
 import com.google.common.annotations.VisibleForTesting
 import com.google.mediapipe.framework.image.BitmapImageBuilder
@@ -14,6 +15,7 @@ import com.google.mediapipe.tasks.core.proto.BaseOptionsProto.BaseOptionsOrBuild
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facedetector.FaceDetector
 import com.google.mediapipe.tasks.vision.facedetector.FaceDetectorResult
+import java.lang.IllegalStateException
 
 class FaceDetectorHelper(
     var threshold: Float = THRESHOLD_DEFAULT,
@@ -40,22 +42,40 @@ class FaceDetectorHelper(
         val modelName = "blazeRange_FaceDetection_Short.tflite"
         baseOptionsBuilder.setModelAssetPath(modelName)
 
-        val optionsBuilder = FaceDetector.FaceDetectorOptions.builder()
-            .setBaseOptions(baseOptionsBuilder.build())
-            .setMinDetectionConfidence(threshold)
-            .setResultListener(this::returnLivestreamResult)
-            .setErrorListener(this::returnLivestreamError)
-            .setRunningMode(RunningMode.LIVE_STREAM)
+        try {
+            val optionsBuilder = FaceDetector.FaceDetectorOptions.builder()
+                .setBaseOptions(baseOptionsBuilder.build())
+                .setMinDetectionConfidence(threshold)
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                .setResultListener(this::returnLivestreamResult)
+                .setErrorListener(this::returnLivestreamError)
 
-        val options = optionsBuilder.build()
-
-        faceDetector = FaceDetector.createFromOptions(context,options)
+            val options = optionsBuilder.build()
+            faceDetector = FaceDetector.createFromOptions(context,options)
+        }
+        catch (e: IllegalStateException) {
+            faceDetectorListener?.onError(
+                "Face detector failed to initialize. See error logs for details"
+            )
+            Log.e(TAG, "TFLite failed to load model with error: " + e.message)
+        } catch (e: RuntimeException) {
+            faceDetectorListener?.onError(
+                "Face detector failed to initialize. See error logs for " +
+                        "details", GPU_ERROR
+            )
+            Log.e(
+                TAG,
+                "Face detector failed to load model with error: " + e.message
+            )
+        }
     }
 
+    fun isClosed(): Boolean {
+        return faceDetector == null
+    }
     // Runs face detection on live streaming cameras frame-by-frame and returns the results
     // asynchronously to the caller.
     fun detectLivestreamFrame(imageProxy: ImageProxy) {
-
         if (runningMode != RunningMode.LIVE_STREAM) {
             throw IllegalArgumentException(
                 "Attempting to call detectLivestreamFrame" +
