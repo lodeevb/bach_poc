@@ -113,9 +113,7 @@ class OverlayView(
     ) {
         results = detectionResults
 
-        // Images, videos and camera live streams are displayed in FIT_START mode. So we need to scale
-        // up the bounding box to match with the size that the images/videos/live streams being
-        // displayed.
+
         scaleFactor = min(width * 1f / imageWidth, height * 1f / imageHeight)
 
         invalidate()
