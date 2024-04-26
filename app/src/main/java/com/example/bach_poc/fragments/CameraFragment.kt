@@ -12,35 +12,65 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.example.bach_poc.classes.FaceDetectorHelper
+import androidx.navigation.Navigation
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_DRAGGING
+import com.example.bach_poc.R
+import com.example.bach_poc.classes.FaceLandmarkerHelper
 import com.example.bach_poc.databinding.FragmentCameraBinding
-import com.example.bach_poc.viewModels.MainViewModel
-import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.lang.IllegalStateException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
-class CameraFragment : Fragment(), FaceDetectorHelper.DetectorListener {
+class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkListener {
 
-    private val TAG = "FaceDetection"
+    private val TAG = "Face Landmarker"
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
     private val fragmentCameraBinding get() = _fragmentCameraBinding!!
 
+    private val faceBlendshapesResultAdapter by lazy {
+        FaceBlendshapesResultAdapter()
+    }
 
-    private lateinit var faceDetectorHelper: FaceDetectorHelper
+    private lateinit var faceLandmarkerHelper: FaceLandmarkerHelper
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
     private lateinit var backgroundExecutor: ExecutorService
+
+    override fun onResume() {
+        super.onResume()
+        if(!PermissionsFragment.hasPermissions(requireContext())) {
+            Navigation.findNavController(requireActivity(), R.id.fragment_container)
+                .navigate(R.id.action_camera_to_permissions)
+        }
+        backgroundExecutor.execute {
+            if (faceLandmarkerHelper.isClose()) {
+                faceLandmarkerHelper.setupFaceLandmarker()
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        _fragmentCameraBinding = null
+        super.onDestroyView()
+
+        backgroundExecutor.shutdown()
+        backgroundExecutor.awaitTermination(
+            Long.MAX_VALUE, TimeUnit.NANOSECONDS
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,23 +86,28 @@ class CameraFragment : Fragment(), FaceDetectorHelper.DetectorListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //Init backgroundExecutor
+        with(fragmentCameraBinding.recyclerviewResults) {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = faceBlendshapesResultAdapter
+        }
+
         backgroundExecutor = Executors.newSingleThreadExecutor()
 
-        backgroundExecutor.execute {
-            faceDetectorHelper = FaceDetectorHelper(
-                context = requireContext(),
-                threshold = 0.5F,
-                currentDelegate = 0,
-                faceDetectorListener = this,
-                runningMode = RunningMode.LIVE_STREAM
-            )
-        }
-        // Wait for the views to be properly laid out
         fragmentCameraBinding.viewFinder.post {
             setUpCamera()
         }
 
+        backgroundExecutor.execute {
+            faceLandmarkerHelper = FaceLandmarkerHelper(
+                context = requireContext(),
+                minFaceDetectionConfidence = 0.5F,
+                minFacePresenceConfidence = 0.5F,
+                minFaceTrackingConfidence = 0.5F,
+                maxNumFaces = 1,
+                currentDelegate = 0,
+                faceLandmarkerHelperListener = this
+            )
+        }
     }
 
     private fun setUpCamera() {
@@ -117,10 +152,9 @@ class CameraFragment : Fragment(), FaceDetectorHelper.DetectorListener {
             .setOutputImageFormat(OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
             .also {
-                it.setAnalyzer(
-                    backgroundExecutor,
-                    faceDetectorHelper::detectLivestreamFrame
-                )
+                it.setAnalyzer(backgroundExecutor) { image ->
+                    detectFace(image)
+                }
             }
 
         // Must unbind the use-cases before rebinding them
@@ -143,30 +177,46 @@ class CameraFragment : Fragment(), FaceDetectorHelper.DetectorListener {
         }
     }
 
+    private fun detectFace(imageProxy: ImageProxy){
+        faceLandmarkerHelper.detectLivestream(
+            imageProxy = imageProxy
+        )
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
     override fun onError(error: String, errorCode: Int) {
         activity?.runOnUiThread {
             Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
+            faceBlendshapesResultAdapter.updateResults(null)
+            faceBlendshapesResultAdapter.notifyDataSetChanged()
         }
     }
 
-    override fun onResults(resultBundle: FaceDetectorHelper.ResultBundle) {
+    @SuppressLint("NotifyDataSetChanged")
+    override fun onEmpty() {
+        fragmentCameraBinding.overlay.clear()
+        activity?.runOnUiThread {
+            faceBlendshapesResultAdapter.updateResults(null)
+            faceBlendshapesResultAdapter.notifyDataSetChanged()
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
         activity?.runOnUiThread {
             if (_fragmentCameraBinding != null) {
-
-                // Pass necessary information to OverlayView for drawing on the canvas
-                val detectionResult = resultBundle.results[0]
-                if (isAdded) {
-                    fragmentCameraBinding.overlay.setResults(
-                        detectionResult,
-                        resultBundle.inputImageHeight,
-                        resultBundle.inputImageWidth
-                    )
+                if (fragmentCameraBinding.recyclerviewResults.scrollState != SCROLL_STATE_DRAGGING) {
+                    faceBlendshapesResultAdapter.updateResults(resultBundle.result)
+                    faceBlendshapesResultAdapter.notifyDataSetChanged()
                 }
 
-                // Force a redraw
+                fragmentCameraBinding.overlay.setResults(
+                    resultBundle.result,
+                    resultBundle.inputImageHeight,
+                    resultBundle.inputImageWidth,
+                )
                 fragmentCameraBinding.overlay.invalidate()
             }
         }
     }
-
 }

@@ -11,20 +11,22 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import com.example.bach_poc.R
 import com.google.mediapipe.tasks.vision.facedetector.FaceDetectorResult
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
+import kotlin.math.max
 import kotlin.math.min
 
 class OverlayView(
     context: Context?,
     attrs: AttributeSet?,
     ): View(context, attrs) {
-    private var results: FaceDetectorResult? = null
-    private var boxPaint = Paint()
-    private var textBackgroundPaint = Paint()
-    private var textPaint = Paint()
+    private var results: FaceLandmarkerResult? = null
+    private var linePaint = Paint()
+    private var pointPaint = Paint()
 
-    private var scaleFactor: Float = 1f
-
-    private var bounds = Rect()
+    private var scaleFactor: Float = 1F
+    private var imageWidth: Int = 1
+    private var imageHeight: Int = 1
 
     init {
         initPaints()
@@ -32,87 +34,55 @@ class OverlayView(
 
     fun clear() {
         results = null
-        textPaint.reset()
-        textBackgroundPaint.reset()
-        boxPaint.reset()
+        linePaint.reset()
+        pointPaint.reset()
         invalidate()
         initPaints()
     }
 
     private fun initPaints() {
-        textBackgroundPaint.color = Color.BLACK
-        textBackgroundPaint.style = Paint.Style.FILL
-        textBackgroundPaint.textSize = 50f
-
-        textPaint.color = Color.WHITE
-        textPaint.style = Paint.Style.FILL
-        textPaint.textSize = 50f
-
-        boxPaint.color = ContextCompat.getColor(context!!, R.color.mp_primary)
-        boxPaint.strokeWidth = 8F
-        boxPaint.style = Paint.Style.STROKE
+        linePaint.color = ContextCompat.getColor(context!!, R.color.mp_color_primary)
+        linePaint.strokeWidth = LANDMARK_STROKE_WIDTH
+        linePaint.style = Paint.Style.STROKE
+        pointPaint.color = Color.YELLOW
+        pointPaint.strokeWidth = LANDMARK_STROKE_WIDTH
+        pointPaint.style = Paint.Style.FILL
     }
 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
+        if (results == null || results!!.faceLandmarks().isEmpty()) {
+            clear()
+            return
+        }
 
-        results?.let {
-            for (detection in it.detections()) {
-                val boundingBox = detection.boundingBox()
+        results?.let {res ->
+            for (landmark in res.faceLandmarks()) {
+                for(normalizedLandmark in landmark) {
+                    canvas.drawPoint(normalizedLandmark.x() * imageWidth * scaleFactor, normalizedLandmark.y() * imageHeight * scaleFactor, pointPaint)
+                }
+            }
 
-                val top = boundingBox.top * scaleFactor
-                val bottom = boundingBox.bottom * scaleFactor
-                val left = boundingBox.left * scaleFactor
-                val right = boundingBox.right * scaleFactor
-
-                // Draw bounding box around detected faces
-                val drawableRect = RectF(left, top, right, bottom)
-                canvas.drawRect(drawableRect, boxPaint)
-
-                // Create text to display alongside detected faces
-                val drawableText =
-                    detection.categories()[0].categoryName() +
-                            " " +
-                            String.format(
-                                "%.2f",
-                                detection.categories()[0].score()
-                            )
-
-                // Draw rect behind display text
-                textBackgroundPaint.getTextBounds(
-                    drawableText,
-                    0,
-                    drawableText.length,
-                    bounds
-                )
-                val textWidth = bounds.width()
-                val textHeight = bounds.height()
-                canvas.drawRect(
-                    left,
-                    top,
-                    left + textWidth + Companion.BOUNDING_RECT_TEXT_PADDING,
-                    top + textHeight + Companion.BOUNDING_RECT_TEXT_PADDING,
-                    textBackgroundPaint
-                )
-
-                // Draw text for detected face
-                canvas.drawText(
-                    drawableText,
-                    left,
-                    top + bounds.height(),
-                    textPaint
+            FaceLandmarker.FACE_LANDMARKS_CONNECTORS.forEach {
+                canvas.drawLine(
+                    res.faceLandmarks().get(0).get(it.start()).x() * imageWidth * scaleFactor,
+                    res.faceLandmarks().get(0).get(it.start()).y() * imageHeight * scaleFactor,
+                    res.faceLandmarks().get(0).get(it.end()).x() * imageWidth * scaleFactor,
+                    res.faceLandmarks().get(0).get(it.end()).y() * imageHeight * scaleFactor,
+                    linePaint
                 )
             }
         }
     }
 
     fun setResults(
-        detectionResults: FaceDetectorResult,
+        detectionResults: FaceLandmarkerResult,
         imageHeight: Int,
         imageWidth: Int,
     ) {
         results = detectionResults
-
+        this.imageHeight = imageHeight
+        this.imageWidth = imageWidth
 
         scaleFactor = min(width * 1f / imageWidth, height * 1f / imageHeight)
 
@@ -120,6 +90,7 @@ class OverlayView(
     }
 
     companion object {
-        private const val BOUNDING_RECT_TEXT_PADDING = 8
+        private const val LANDMARK_STROKE_WIDTH = 8F
+        private const val TAG = "Face Landmarker Overlay"
     }
 }

@@ -21,7 +21,6 @@ class FaceLandmarkerHelper(
     var minFacePresenceConfidence: Float = DEFAULT_FACE_PRESENCE_CONFIDENCE,
     var maxNumFaces: Int = DEFAULT_NUM_FACES,
     var currentDelegate: Int = DELEGATE_CPU,
-    var runningMode: RunningMode = RunningMode.LIVE_STREAM,
     var context: Context,
     var faceLandmarkerHelperListener: LandmarkListener? = null
 ){
@@ -31,11 +30,11 @@ class FaceLandmarkerHelper(
         setupFaceLandmarker()
     }
 
-    fun clearFaceLandmarker(){
-        faceLandmarker?.close()
-        faceLandmarker = null
+    fun isClose(): Boolean {
+        return faceLandmarker == null
     }
-    private fun setupFaceLandmarker() {
+
+    fun setupFaceLandmarker() {
        val baseOptionBuilder = BaseOptions.builder()
 
         when (currentDelegate) {
@@ -113,8 +112,7 @@ class FaceLandmarkerHelper(
     }
 
     fun detectLivestream(
-        imageProxy: ImageProxy,
-        isFrontCamera: Boolean
+        imageProxy: ImageProxy
     ) {
         val frameTime = SystemClock.uptimeMillis()
 
@@ -157,18 +155,19 @@ class FaceLandmarkerHelper(
         const val OTHER_ERROR = 0
         const val GPU_ERROR = 1
 
-        data class ResultBundle(
-            val result: FaceLandmarkerResult,
-            val inferenceTime: Long,
-            val inputImageHeight: Int,
-            val inputImageWidth: Int,
-        )
+    }
 
-        interface LandmarkListener {
-            fun onError(error: String, errorCode: Int = OTHER_ERROR)
-            fun onResults(resultBundle: ResultBundle)
-            fun onEmpty() {}
-        }
+    data class ResultBundle(
+        val result: FaceLandmarkerResult,
+        val inferenceTime: Long,
+        val inputImageHeight: Int,
+        val inputImageWidth: Int,
+    )
+
+    interface LandmarkListener {
+        fun onError(error: String, errorCode: Int = OTHER_ERROR)
+        fun onResults(resultBundle: ResultBundle)
+        fun onEmpty() {}
     }
 
 }
