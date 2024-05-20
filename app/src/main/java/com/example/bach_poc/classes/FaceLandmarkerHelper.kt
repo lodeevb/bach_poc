@@ -9,6 +9,7 @@ import androidx.camera.core.ImageProxy
 import com.google.common.annotations.VisibleForTesting
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.Category
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -112,7 +113,7 @@ class FaceLandmarkerHelper(
     }
 
     fun detectLivestream(
-        imageProxy: ImageProxy
+        imageProxy: ImageProxy,
     ) {
         val frameTime = SystemClock.uptimeMillis()
 
@@ -136,7 +137,6 @@ class FaceLandmarkerHelper(
         detectAsync(mpImage, frameTime)
     }
 
-    @VisibleForTesting
     private fun detectAsync(mpImage: MPImage, frameTime: Long) {
         faceLandmarker?.detectAsync(mpImage,frameTime)
     }
@@ -148,8 +148,8 @@ class FaceLandmarkerHelper(
 
         const val DELEGATE_CPU = 0
         const val DELEGATE_GPU = 1
-        const val DEFAULT_FACE_DETECTION_CONFIDENCE = 0.5F
-        const val DEFAULT_FACE_TRACKING_CONFIDENCE = 0.5F
+        const val DEFAULT_FACE_DETECTION_CONFIDENCE = 0.8F
+        const val DEFAULT_FACE_TRACKING_CONFIDENCE = 0.99F
         const val DEFAULT_FACE_PRESENCE_CONFIDENCE = 0.5F
         const val DEFAULT_NUM_FACES = 1
         const val OTHER_ERROR = 0

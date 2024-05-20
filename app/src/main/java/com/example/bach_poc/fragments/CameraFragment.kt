@@ -100,11 +100,6 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkListener {
         backgroundExecutor.execute {
             faceLandmarkerHelper = FaceLandmarkerHelper(
                 context = requireContext(),
-                minFaceDetectionConfidence = 0.5F,
-                minFacePresenceConfidence = 0.5F,
-                minFaceTrackingConfidence = 0.5F,
-                maxNumFaces = 1,
-                currentDelegate = 0,
                 faceLandmarkerHelperListener = this
             )
         }
@@ -114,10 +109,7 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkListener {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener(
             {
-                // CameraProvider
                 cameraProvider = cameraProviderFuture.get()
-
-                // Build and bind the camera use cases
                 bindCameraUseCases()
             },
             ContextCompat.getMainExecutor(requireContext())
@@ -187,7 +179,7 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkListener {
     override fun onError(error: String, errorCode: Int) {
         activity?.runOnUiThread {
             Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
-            faceBlendshapesResultAdapter.updateResults(null)
+            faceBlendshapesResultAdapter.updateResults(null,0,0)
             faceBlendshapesResultAdapter.notifyDataSetChanged()
         }
     }
@@ -196,7 +188,7 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkListener {
     override fun onEmpty() {
         fragmentCameraBinding.overlay.clear()
         activity?.runOnUiThread {
-            faceBlendshapesResultAdapter.updateResults(null)
+            faceBlendshapesResultAdapter.updateResults(null,0,0)
             faceBlendshapesResultAdapter.notifyDataSetChanged()
         }
     }
@@ -206,7 +198,7 @@ class CameraFragment : Fragment(), FaceLandmarkerHelper.LandmarkListener {
         activity?.runOnUiThread {
             if (_fragmentCameraBinding != null) {
                 if (fragmentCameraBinding.recyclerviewResults.scrollState != SCROLL_STATE_DRAGGING) {
-                    faceBlendshapesResultAdapter.updateResults(resultBundle.result)
+                    faceBlendshapesResultAdapter.updateResults(resultBundle.result, inputWidth = resultBundle.inputImageWidth, inputHeight = resultBundle.inputImageHeight)
                     faceBlendshapesResultAdapter.notifyDataSetChanged()
                 }
 

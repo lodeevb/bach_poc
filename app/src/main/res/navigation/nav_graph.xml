@@ -14,7 +14,6 @@
             app:destination="@id/camera_fragment"
             app:popUpTo="@id/permissions_fragment"
             app:popUpToInclusive="true" />
-
     </fragment>
 
     <fragment
