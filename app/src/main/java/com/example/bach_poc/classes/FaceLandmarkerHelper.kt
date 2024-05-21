@@ -148,8 +148,8 @@ class FaceLandmarkerHelper(
 
         const val DELEGATE_CPU = 0
         const val DELEGATE_GPU = 1
-        const val DEFAULT_FACE_DETECTION_CONFIDENCE = 0.8F
-        const val DEFAULT_FACE_TRACKING_CONFIDENCE = 0.99F
+        const val DEFAULT_FACE_DETECTION_CONFIDENCE = 0.5F
+        const val DEFAULT_FACE_TRACKING_CONFIDENCE = 0.5F
         const val DEFAULT_FACE_PRESENCE_CONFIDENCE = 0.5F
         const val DEFAULT_NUM_FACES = 1
         const val OTHER_ERROR = 0

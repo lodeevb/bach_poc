@@ -82,7 +82,7 @@ class FaceBlendshapesResultAdapter : RecyclerView.Adapter<FaceBlendshapesResultA
     }
 
     fun calculateDistance(p1: PointF, p2: PointF): Float {
-        return sqrt((p2.x - p1.x).pow(2) + (p2.y - p1.y).pow(2))
+        return sqrt((p1.x - p2.x).pow(2) + (p1.y - p2.y).pow(2))
     }
 
     fun calculateEAR(eyeLandmarks: List<PointF>): Float {
@@ -121,9 +121,5 @@ class FaceBlendshapesResultAdapter : RecyclerView.Adapter<FaceBlendshapesResultA
                 else if (score > 30) tvState.text = "Fatigue"
             }
         }
-    }
-
-    companion object {
-        private const val NO_VALUE = "--"
     }
 }
