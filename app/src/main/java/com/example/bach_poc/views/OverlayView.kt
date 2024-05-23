@@ -65,10 +65,10 @@ class OverlayView(
 
             FaceLandmarker.FACE_LANDMARKS_CONNECTORS.forEach {
                 canvas.drawLine(
-                    res.faceLandmarks().get(0).get(it.start()).x() * imageWidth * scaleFactor,
-                    res.faceLandmarks().get(0).get(it.start()).y() * imageHeight * scaleFactor,
-                    res.faceLandmarks().get(0).get(it.end()).x() * imageWidth * scaleFactor,
-                    res.faceLandmarks().get(0).get(it.end()).y() * imageHeight * scaleFactor,
+                    res.faceLandmarks()[0][it.start()].x() * imageWidth * scaleFactor,
+                    res.faceLandmarks()[0][it.start()].y() * imageHeight * scaleFactor,
+                    res.faceLandmarks()[0][it.end()].x() * imageWidth * scaleFactor,
+                    res.faceLandmarks()[0][it.end()].y() * imageHeight * scaleFactor,
                     linePaint
                 )
             }

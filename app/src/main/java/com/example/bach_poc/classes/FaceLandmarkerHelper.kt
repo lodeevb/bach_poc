@@ -21,7 +21,7 @@ class FaceLandmarkerHelper(
     var minFaceTrackingConfidence: Float = DEFAULT_FACE_TRACKING_CONFIDENCE,
     var minFacePresenceConfidence: Float = DEFAULT_FACE_PRESENCE_CONFIDENCE,
     var maxNumFaces: Int = DEFAULT_NUM_FACES,
-    var currentDelegate: Int = DELEGATE_CPU,
+    var currentDelegate: Int = DELEGATE_GPU,
     var context: Context,
     var faceLandmarkerHelperListener: LandmarkListener? = null
 ){
